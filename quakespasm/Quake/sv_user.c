@@ -25,6 +25,7 @@ Foundation, Inc., 59 Temple Place - Suite 330, Boston, MA  02111-1307, USA.
 
 edict_t	*sv_player;
 
+extern cvar_t sv_lives; //Stradex
 extern	cvar_t	sv_friction;
 cvar_t	sv_edgefriction = {"edgefriction", "2", CVAR_NONE};
 extern	cvar_t	sv_stopspeed;
@@ -42,6 +43,7 @@ usercmd_t	cmd;
 
 cvar_t	sv_idealpitchscale = {"sv_idealpitchscale","0.8",CVAR_NONE};
 cvar_t	sv_altnoclip = {"sv_altnoclip","1",CVAR_ARCHIVE}; //johnfitz
+cvar_t	sv_gameplay_keepitemsrespawn = { "sv_gameplay_keepitemsrespawn","0",CVAR_NONE };
 
 qboolean SV_RunThink (edict_t *ent);
 
@@ -378,6 +380,208 @@ void SV_AirMove (void)
 	}
 }
 
+
+/*
+===================
+SV_ClientKilled
+===================
+*/
+
+void SV_ClientKilled(void) {
+	if (sv_player->alreadyDeath) {
+		return;
+	}
+	if ((int)sv_lives.value > 0) {
+		sv_player->lives--;
+		if (sv_player->lives == 0) {
+			SV_BroadcastPrintf("%s is out of lives.\n", PR_GetString(sv_player->v.netname));
+		}
+	}
+	sv_player->alreadyDeath = true;
+}
+
+/*
+===================
+SV_SaveClientItems
+===================
+*/
+
+void SV_SaveClientItems(void) {
+
+	if (!sv_gameplay_keepitemsrespawn.value) {
+		return;
+	}
+
+	sv_player->oldv.items = sv_player->v.items;
+	sv_player->oldv.ammo_cells = sv_player->v.ammo_cells;
+	sv_player->oldv.ammo_nails = sv_player->v.ammo_nails;
+	sv_player->oldv.ammo_rockets = sv_player->v.ammo_rockets;
+	sv_player->oldv.ammo_shells = sv_player->v.ammo_shells;
+}
+
+/*
+===================
+SV_RestoreClientItems
+===================
+*/
+
+void SV_RestoreClientItems(void) {
+	if (!sv_gameplay_keepitemsrespawn.value) {
+		return;
+	}
+
+	if (!(int)(sv_player->oldv.items)) {
+		return; //just in case
+	}
+
+	sv_player->v.items = sv_player->oldv.items;
+	sv_player->v.ammo_cells = sv_player->oldv.ammo_cells;
+	sv_player->v.ammo_nails = sv_player->oldv.ammo_nails;
+	sv_player->v.ammo_rockets = sv_player->oldv.ammo_rockets;
+	sv_player->v.ammo_shells = sv_player->oldv.ammo_shells;
+
+	if (sv_player->v.ammo_shells < 10) { //Stradex: Consider this a gift
+		sv_player->v.ammo_shells = 10;
+	}
+
+	//johnfitz -- update currentammo to match new ammo (so statusbar updates correctly)
+	switch ((int)(sv_player->v.weapon))
+	{
+	case IT_SHOTGUN:
+	case IT_SUPER_SHOTGUN:
+		sv_player->v.currentammo = sv_player->v.ammo_shells;
+		break;
+	case IT_NAILGUN:
+	case IT_SUPER_NAILGUN:
+	case RIT_LAVA_SUPER_NAILGUN:
+		sv_player->v.currentammo = sv_player->v.ammo_nails;
+		break;
+	case IT_GRENADE_LAUNCHER:
+	case IT_ROCKET_LAUNCHER:
+	case RIT_MULTI_GRENADE:
+	case RIT_MULTI_ROCKET:
+		sv_player->v.currentammo = sv_player->v.ammo_rockets;
+		break;
+	case IT_LIGHTNING:
+	case HIT_LASER_CANNON:
+	case HIT_MJOLNIR:
+		sv_player->v.currentammo = sv_player->v.ammo_cells;
+		break;
+	case RIT_LAVA_NAILGUN: //same as IT_AXE
+		if (rogue)
+			sv_player->v.currentammo = sv_player->v.ammo_nails;
+		break;
+	case RIT_PLASMA_GUN: //same as HIT_PROXIMITY_GUN
+		if (rogue)
+			sv_player->v.currentammo = sv_player->v.ammo_cells;
+		if (hipnotic)
+			sv_player->v.currentammo = sv_player->v.ammo_rockets;
+		break;
+	}
+}
+
+/*
+===================
+SV_ClientJoinGame
+
+===================
+*/
+
+void SV_ClientJoinGame(void) {
+	sv_player->v.modelindex = SV_ModelIndex("progs/player.mdl");
+	sv_player->v.deadflag = DEAD_NO;
+	noclip_anglehack = false;
+	sv_player->v.movetype = MOVETYPE_WALK;
+	sv_player->v.items = IT_AXE | IT_SHOTGUN;
+	sv_player->v.ammo_cells = 0;
+	sv_player->v.ammo_nails = 0;
+	sv_player->v.ammo_rockets = 0;
+	sv_player->v.ammo_shells = 10;
+	if (sv_player->oldv.solid) {
+		sv_player->v.solid = sv_player->oldv.solid;
+	}
+	else {
+		sv_player->v.solid = SOLID_BSP;
+	}
+
+	int			e;
+	edict_t* check;
+
+	// search for an info_playerstart to spawn the spectator at
+	check = NEXT_EDICT(qcvm->edicts);
+	for (e = 1; e < qcvm->num_edicts; e++, check = NEXT_EDICT(check))
+	{
+		if (!strcmp(PR_GetString(check->v.classname), "info_player_start")) {
+			VectorCopy(check->v.origin, sv_player->v.origin);
+			VectorCopy(check->v.angles, sv_player->v.angles);
+		}
+	}
+}
+
+/*
+===================
+SV_Spectating
+
+===================
+*/
+
+void SV_Spectating(void) {
+
+	sv_player->v.deadflag = DEAD_DYING;
+	if (sv_player->v.movetype != MOVETYPE_NOCLIP)
+	{
+		noclip_anglehack = true;
+		sv_player->v.movetype = MOVETYPE_NOCLIP;
+	}
+	SV_NoclipMove();
+
+	if (sv_player->v.solid != SOLID_NOT) {
+		sv_player->oldv.solid = sv_player->v.solid; //save old kind of solid to restore later
+		sv_player->v.solid = SOLID_NOT; //To avoid touching trigger and stuff
+	}
+	sv_player->v.modelindex = SV_ModelIndex("progs/eyes.mdl");;
+	sv_player->v.items = IT_INVISIBILITY;
+	sv_player->v.ammo_cells = 0;
+	sv_player->v.ammo_nails = 0;
+	sv_player->v.ammo_rockets = 0;
+	sv_player->v.ammo_shells = 0;
+
+	//johnfitz -- update currentammo to match new ammo (so statusbar updates correctly)
+	switch ((int)(sv_player->v.weapon))
+	{
+	case IT_SHOTGUN:
+	case IT_SUPER_SHOTGUN:
+		sv_player->v.currentammo = sv_player->v.ammo_shells;
+		break;
+	case IT_NAILGUN:
+	case IT_SUPER_NAILGUN:
+	case RIT_LAVA_SUPER_NAILGUN:
+		sv_player->v.currentammo = sv_player->v.ammo_nails;
+		break;
+	case IT_GRENADE_LAUNCHER:
+	case IT_ROCKET_LAUNCHER:
+	case RIT_MULTI_GRENADE:
+	case RIT_MULTI_ROCKET:
+		sv_player->v.currentammo = sv_player->v.ammo_rockets;
+		break;
+	case IT_LIGHTNING:
+	case HIT_LASER_CANNON:
+	case HIT_MJOLNIR:
+		sv_player->v.currentammo = sv_player->v.ammo_cells;
+		break;
+	case RIT_LAVA_NAILGUN: //same as IT_AXE
+		if (rogue)
+			sv_player->v.currentammo = sv_player->v.ammo_nails;
+		break;
+	case RIT_PLASMA_GUN: //same as HIT_PROXIMITY_GUN
+		if (rogue)
+			sv_player->v.currentammo = sv_player->v.ammo_cells;
+		if (hipnotic)
+			sv_player->v.currentammo = sv_player->v.ammo_rockets;
+		break;
+	}
+}
+
 /*
 ===================
 SV_ClientThink
@@ -403,9 +607,19 @@ void SV_ClientThink (void)
 //
 // if dead, behave differently
 //
-	if (sv_player->v.health <= 0)
+	if (sv_player->v.health <= 0) {
+		SV_ClientKilled();
 		return;
-
+	} else {
+		if (sv_player->alreadyDeath) {
+			SV_RestoreClientItems();
+			sv_player->alreadyDeath = false;
+		}
+		else {
+			SV_SaveClientItems();
+		}
+	}
+	
 //
 // angles
 // show 1/3 the pitch angle and all the roll angle
@@ -420,6 +634,19 @@ void SV_ClientThink (void)
 		angles[YAW] = v_angle[YAW];
 	}
 
+	// Stradex spectator mode
+	if (sv_player->spectator || ((int)sv_lives.value > 0 && sv_player->lives <= 0)) {
+		sv_player->spectating = true;
+	} else  if (sv_player->spectating) {
+		sv_player->spectating = false;
+		SV_ClientJoinGame();
+	}
+
+	if (sv_player->spectating) { //spectator mode activated for this player
+		SV_Spectating();
+		return;
+	}
+
 	if ( (int)sv_player->v.flags & FL_WATERJUMP )
 	{
 		SV_WaterJump ();
@@ -428,6 +655,7 @@ void SV_ClientThink (void)
 //
 // walk
 //
+
 	//johnfitz -- alternate noclip
 	if (sv_player->v.movetype == MOVETYPE_NOCLIP && sv_altnoclip.value)
 		SV_NoclipMove ();

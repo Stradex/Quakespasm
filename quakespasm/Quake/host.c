@@ -41,6 +41,7 @@ quakeparms_t *host_parms;
 
 qboolean	host_initialized;		// true if into command execution
 
+double		host_restartmap_time;	//added for survival
 double		host_frametime;
 double		realtime;				// without any filtering or bounding
 double		oldrealtime;			// last frame run
@@ -79,6 +80,9 @@ cvar_t	coop = {"coop","0",CVAR_SERVERINFO};			// 0 or 1
 cvar_t	pausable = {"pausable","1",CVAR_NONE};
 
 cvar_t	developer = {"developer","0",CVAR_NONE};
+
+//added by stradex:
+cvar_t  sv_lives = { "sv_lives","0",CVAR_ARCHIVE }; // Stradex - 0 Lives means coop, 1 or more means survival.
 
 static cvar_t	pr_engine = {"pr_engine", ENGINE_NAME_AND_VER, CVAR_NONE};
 cvar_t	temp1 = {"temp1","0",CVAR_NONE};
@@ -321,6 +325,7 @@ void Host_InitLocal (void)
 	Cvar_RegisterVariable (&pausable);
 
 	Cvar_RegisterVariable (&temp1);
+	Cvar_RegisterVariable(&sv_lives);
 
 	Host_FindMaxClients ();
 }
@@ -686,6 +691,58 @@ void Host_GetConsoleCommands (void)
 
 /*
 ==================
+Host_SurvivalCheck
+==================
+*/
+
+void Host_SurvivalCheck(void) {
+	int i;
+
+	if (host_restartmap_time > 1.0) {
+		if (realtime > host_restartmap_time) {
+			host_restartmap_time = 0.0;
+			
+			/*
+			for (i = 0; i < svs.maxclients; i++) //giving lives to players to avoid loop
+			{
+				if (svs.clients[i].active && svs.clients[i].spawned)
+				{
+					svs.clients[i].edict->lives = (int)sv_lives.value;
+				}
+			}
+			//FIXME: Without solution yet;
+			//Cmd_ExecuteString("restart\n", src_command);
+			*/
+		}
+		return;
+	}
+	if ((int)sv_lives.value <= 0) { //Not survival game-mode then
+		return;
+	}
+
+	int clientsAlive = 0;
+	int clientsInGame = 0;
+	for (i = 0; i < svs.maxclients; i++)
+	{
+		if (svs.clients[i].active && svs.clients[i].spawned)
+		{
+			clientsInGame++;
+			if (svs.clients[i].edict->lives > 0) {
+				clientsAlive++;
+			}
+		}
+	}
+	if (clientsInGame > 0 && clientsAlive <= 0) {
+		SV_BroadcastPrintf("All players died, restarting the map in 10 seconds.\n");
+		host_restartmap_time = realtime + 5.0;
+	}
+	else {
+		host_restartmap_time = 0.0;
+	}
+}
+
+/*
+==================
 Host_ServerFrame
 ==================
 */
@@ -708,8 +765,10 @@ void Host_ServerFrame (void)
 
 // move things around and think
 // always pause in single player if in console or menus
-	if (!sv.paused && (svs.maxclients > 1 || key_dest == key_game) )
-		SV_Physics ();
+	if (!sv.paused && (svs.maxclients > 1 || key_dest == key_game)) {
+		SV_Physics();
+		//Host_SurvivalCheck();
+	}
 
 //johnfitz -- devstats
 	if (cls.signon == SIGNONS)

@@ -32,6 +32,8 @@ line of sight checks trace->crosscontent, but bullets don't
 
 */
 
+cvar_t	sv_itemrespawn = { "sv_itemrespawn","0",CVAR_NONE | CVAR_ARCHIVE }; //0: no respawn, 1: all respawn, 2: only ammo respawn
+
 
 typedef struct
 {
@@ -358,6 +360,19 @@ void SV_TouchLinks (edict_t *ent)
 		pr_global_struct->other = EDICT_TO_PROG(ent);
 		pr_global_struct->time = qcvm->time;
 		PR_ExecuteProgram (touch->v.touch);
+
+		//Stradex
+		if (sv_itemrespawn.value && touch->v.solid == SOLID_NOT && !strcmp(PR_GetString(ent->v.classname), "player") && (ent->v.health > 0) && (strstr(strlwr(PR_GetString(touch->v.classname)), "item_") != NULL)) {
+			if (strstr(strlwr(PR_GetString(touch->v.classname)), "item_artifact") != NULL) {
+				return; //Don't respawn powerups
+			}
+			
+			if ((int)sv_itemrespawn.value == 2 && 
+				(!strcmp(strlwr(PR_GetString(touch->v.classname)), "item_health") || (strstr(strlwr(PR_GetString(touch->v.classname)), "item_armor") != NULL))) { //Only ammo respawn
+				return;
+			}
+			touch->v.nextthink = pr_global_struct->time + 20.0f;
+		}
 
 		pr_global_struct->self = old_self;
 		pr_global_struct->other = old_other;

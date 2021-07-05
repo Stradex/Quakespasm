@@ -27,6 +27,7 @@ Foundation, Inc., 59 Temple Place - Suite 330, Boston, MA  02111-1307, USA.
 #endif
 
 extern cvar_t	pausable;
+entvars_t	checkpointData;     /*  Stradex -- Sorry for this ugly code*/
 
 int	current_skill;
 
@@ -1688,6 +1689,71 @@ void Host_Color_f(void)
 
 /*
 ==================
+Host_Checkpoint_f
+==================
+*/
+void Host_Checkpoint_f(void)
+{
+	if (cmd_source != src_client)
+	{
+		Cmd_ForwardToServer();
+		return;
+	}
+
+	if (Cmd_Argc() < 2) {
+		SV_ClientPrintf("usage:\n");
+		SV_ClientPrintf("    <go> go to a checkpoint\n");
+		SV_ClientPrintf("    <global> make a checkpoint\n");
+		return;
+	}
+
+	if (Q_strcmp(Cmd_Argv(1), "go") == 0) {
+		sv_player->v.origin[0] = checkpointData.origin[0];
+		sv_player->v.origin[1] = checkpointData.origin[1];
+		sv_player->v.origin[2] = checkpointData.origin[2];
+		sv_player->v.angles[0] = checkpointData.angles[0];
+		sv_player->v.angles[1] = checkpointData.angles[1];
+		sv_player->v.angles[2] = checkpointData.angles[2];
+		sv_player->v.velocity[0] = 0;
+		sv_player->v.velocity[1] = 0;
+		sv_player->v.velocity[2] = 0;
+		sv_player->v.fixangle = 1;
+		SV_LinkEdict(sv_player, false);
+	} else if (Q_strcmp(Cmd_Argv(1), "global") == 0) {
+		checkpointData.origin[0] = sv_player->v.origin[0];
+		checkpointData.origin[1] = sv_player->v.origin[1];
+		checkpointData.origin[2] = sv_player->v.origin[2];
+		checkpointData.angles[0] = sv_player->v.angles[0];
+		checkpointData.angles[1] = sv_player->v.angles[1];
+		checkpointData.angles[2] = sv_player->v.angles[2];
+
+		SV_BroadcastPrintf("%s made a new checkpoint.\n", PR_GetString(sv_player->v.netname));
+	}
+}
+/*
+==================
+Host_Observe_f
+==================
+*/
+
+void Host_Observe_f(void) {
+	if (cmd_source != src_client)
+	{
+		Cmd_ForwardToServer();
+		return;
+	}
+
+	sv_player->spectator = !sv_player->spectator; //Toggle spectator mode
+	if (sv_player->spectator) {
+		SV_BroadcastPrintf("%s is spectating now.\n", PR_GetString(sv_player->v.netname));
+	}
+	else {
+		SV_BroadcastPrintf("%s joined the game.\n", PR_GetString(sv_player->v.netname));
+	}
+}
+
+/*
+==================
 Host_Kill_f
 ==================
 */
@@ -1704,6 +1770,8 @@ void Host_Kill_f (void)
 		SV_ClientPrintf ("Can't suicide -- allready dead!\n");
 		return;
 	}
+
+	SV_ClientKilled();
 
 	pr_global_struct->time = qcvm->time;
 	pr_global_struct->self = EDICT_TO_PROG(sv_player);
@@ -2883,5 +2951,7 @@ void Host_InitCommands (void)
 	Cmd_AddCommand ("viewprev", Host_Viewprev_f);
 
 	Cmd_AddCommand ("mcache", Mod_Print);
+	Cmd_AddCommand_ClientCommand("checkpoint", Host_Checkpoint_f);
+	Cmd_AddCommand_ClientCommand("observe", Host_Observe_f);
 }
 

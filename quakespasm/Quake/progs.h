@@ -49,9 +49,13 @@ typedef struct edict_s
 	unsigned char	alpha;			/* johnfitz -- hack to support alpha since it's not part of entvars_t */
 	qboolean	sendinterval;		/* johnfitz -- send time until nextthink to client for better lerp timing */
 	qboolean	onladder;			/* spike -- content_ladder stuff */
-
+	qboolean	alreadyDeath;		/* Stradex -- HACK to detect when a client just died */
+	qboolean	spectating;		/* Stradex -- FLY MODE spectating */
+	qboolean	spectator;		/* Stradex -- To allow spectator mode */
+	unsigned int lives;		/* Stradex -- SURVIVAL game mode, ammount of lives left. */
 	float		freetime;		/* sv.time when the object was freed */
 	entvars_t	v;			/* C exported fields from progs */
+	entvars_t	oldv;			/*  Stradex -- For items and stuff while using sv_gameplay_keepitemsrespawn*/
 
 	/* other fields from progs come immediately after */
 } edict_t;

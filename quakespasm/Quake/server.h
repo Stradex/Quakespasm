@@ -295,6 +295,7 @@ extern	cvar_t	deathmatch;
 extern	cvar_t	coop;
 extern	cvar_t	fraglimit;
 extern	cvar_t	timelimit;
+extern	cvar_t	sv_lives; //stradex
 
 extern	server_static_t	svs;				// persistant server info
 extern	server_t		sv;					// local server
@@ -326,6 +327,11 @@ void SV_SetIdealPitch (void);
 void SV_AddUpdates (void);
 
 void SV_ClientThink (void);
+void SV_ClientKilled(void); // -- Stradex
+void SV_SaveClientItems(void); // -- Stradex
+void SV_RestoreClientItems(void); // -- Stradex
+void SV_Spectating(void);// -- Stradex
+void SV_ClientJoinGame(void);// -- Stradex stop spectating
 void SV_AddClientToServer (struct qsocket_s	*ret);
 
 void SV_ClientPrintf (const char *fmt, ...) FUNC_PRINTF(1,2);
