@@ -1,6 +1,13 @@
-# Quakespasm
-Extra bloaty junk to modernise stuff a bit.
+# Quakespasm-Spiked's fork by Stradex
 
-# Stradex
+This fork is not expected at all to be as stable as Quakespasm-Spiked. It will use lot of code injection and stuff to add some kind of generic new content that should work
+in many quake mods and mappacks but not expected to work in all of them. But for sure should work in vanilla quake 1.
 
-Trying to add more features like survival, spectator/observe mode, item respawn, and some other shit
+Aiming for: Quake 1, Arcane Dimensions and Alkaline.
+
+Expected features to have:
+-> Survival Game mode (Limited ammount of lives)
+-> Spectator/observe mode
+-> Item respawn (Full item respawn and only ammo respawn)
+-> Damage factor
+-> Fast monsters
