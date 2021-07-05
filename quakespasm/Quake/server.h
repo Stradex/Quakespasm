@@ -287,6 +287,9 @@ typedef struct client_s
 #define	MSG_EXT_MULTICAST	4	// temporary buffer that can be splurged more reliably / with more control.
 #define	MSG_EXT_ENTITY		5	// for csqc networking. we don't actually support this. I'm just defining it for completeness.
 
+//Stradex added
+#define AD_ITEM_RESPAWN		16 // Arcane dimensions, Item respawn from items.qc
+
 //============================================================================
 
 extern	cvar_t	teamplay;

@@ -691,6 +691,26 @@ void Host_GetConsoleCommands (void)
 
 /*
 ==================
+Host_CheckMapRestart
+==================
+*/
+void Host_CheckMapRestart(void) {
+	int i;
+	if (host_restartmap_time > 1.0 && realtime > host_restartmap_time) {
+		host_restartmap_time = 0.0;
+		for (i = 0; i < svs.maxclients; i++) //giving lives to players to avoid loop
+		{
+			if (svs.clients[i].edict && svs.clients[i].active && svs.clients[i].spawned)
+			{
+				svs.clients[i].edict->lives = (int)sv_lives.value;
+			}
+		}
+		Host_Restart_f();
+		//Cmd_ExecuteString("restart\n", src_command);
+	}
+}
+/*
+==================
 Host_SurvivalCheck
 ==================
 */
@@ -699,21 +719,6 @@ void Host_SurvivalCheck(void) {
 	int i;
 
 	if (host_restartmap_time > 1.0) {
-		if (realtime > host_restartmap_time) {
-			host_restartmap_time = 0.0;
-			
-			/*
-			for (i = 0; i < svs.maxclients; i++) //giving lives to players to avoid loop
-			{
-				if (svs.clients[i].active && svs.clients[i].spawned)
-				{
-					svs.clients[i].edict->lives = (int)sv_lives.value;
-				}
-			}
-			//FIXME: Without solution yet;
-			//Cmd_ExecuteString("restart\n", src_command);
-			*/
-		}
 		return;
 	}
 	if ((int)sv_lives.value <= 0) { //Not survival game-mode then
@@ -726,15 +731,16 @@ void Host_SurvivalCheck(void) {
 	{
 		if (svs.clients[i].active && svs.clients[i].spawned)
 		{
+			
 			clientsInGame++;
-			if (svs.clients[i].edict->lives > 0) {
+			if (svs.clients[i].edict && svs.clients[i].edict->lives > 0) {
 				clientsAlive++;
 			}
 		}
 	}
 	if (clientsInGame > 0 && clientsAlive <= 0) {
 		SV_BroadcastPrintf("All players died, restarting the map in 10 seconds.\n");
-		host_restartmap_time = realtime + 5.0;
+		host_restartmap_time = realtime + 10.0;
 	}
 	else {
 		host_restartmap_time = 0.0;
@@ -767,7 +773,7 @@ void Host_ServerFrame (void)
 // always pause in single player if in console or menus
 	if (!sv.paused && (svs.maxclients > 1 || key_dest == key_game)) {
 		SV_Physics();
-		//Host_SurvivalCheck();
+		Host_SurvivalCheck();
 	}
 
 //johnfitz -- devstats
@@ -1030,6 +1036,10 @@ void _Host_Frame (double time)
 	}
 
 	host_framecount++;
+
+	if (sv.active) {
+		Host_CheckMapRestart(); //stradex
+	}
 
 }
 

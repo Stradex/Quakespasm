@@ -366,11 +366,19 @@ void SV_TouchLinks (edict_t *ent)
 			if (strstr(strlwr(PR_GetString(touch->v.classname)), "item_artifact") != NULL) {
 				return; //Don't respawn powerups
 			}
-			
 			if ((int)sv_itemrespawn.value == 2 && 
 				(!strcmp(strlwr(PR_GetString(touch->v.classname)), "item_health") || (strstr(strlwr(PR_GetString(touch->v.classname)), "item_armor") != NULL))) { //Only ammo respawn
 				return;
 			}
+
+			if ((int)touch->v.spawnflags & AD_ITEM_RESPAWN) { //Stradex: Arcane dimensions fix I hope.
+				Con_Printf("Avoiding to touch item that will respawn\n");
+				return;
+			}
+			if (strstr(strlwr(PR_GetString(touch->v.classname)), "item_custom") != NULL) { //Stradex: Arcane dimensions fix I hope
+				return;
+			}
+
 			touch->v.nextthink = pr_global_struct->time + 20.0f;
 		}
 
