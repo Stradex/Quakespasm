@@ -21,6 +21,8 @@ Foundation, Inc., 59 Temple Place - Suite 330, Boston, MA  02111-1307, USA.
 
 #include "quakedef.h"
 
+cvar_t	sv_ignoresomecrashes = { "sv_ignoresomecrashes","1", CVAR_NONE | CVAR_ARCHIVE };
+
 static const char *pr_opnames[] =
 {
 	"DONE",
@@ -353,6 +355,7 @@ The interpretation main loop
 #define OPB ((eval_t *)&qcvm->globals[(unsigned short)st->b])
 #define OPC ((eval_t *)&qcvm->globals[(unsigned short)st->c])
 
+
 void PR_ExecuteProgram (func_t fnum)
 {
 	eval_t		*ptr;
@@ -364,6 +367,11 @@ void PR_ExecuteProgram (func_t fnum)
 
 	if (!fnum || fnum >= qcvm->progs->numfunctions)
 	{
+
+		if (sv_ignoresomecrashes.value) { //stradex: ugly ugly hack
+			Con_Printf("[FATAL WARNING] PR_ExecuteProgram: NULL function\n");
+			return;
+		}
 		if (pr_global_struct->self)
 			ED_Print (PROG_TO_EDICT(pr_global_struct->self));
 		Host_Error ("PR_ExecuteProgram: NULL function");

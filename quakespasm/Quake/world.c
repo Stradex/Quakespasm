@@ -32,7 +32,7 @@ line of sight checks trace->crosscontent, but bullets don't
 
 */
 
-cvar_t	sv_itemrespawn = { "sv_itemrespawn","0",CVAR_NONE | CVAR_ARCHIVE }; //0: no respawn, 1: all respawn, 2: only ammo respawn
+cvar_t	sv_itemrespawn = { "sv_itemrespawn","0", CVAR_NONE | CVAR_ARCHIVE }; //0: no respawn, 1: all respawn, 2: only ammo respawn
 
 
 typedef struct
@@ -370,9 +370,9 @@ void SV_TouchLinks (edict_t *ent)
 				(!strcmp(strlwr(PR_GetString(touch->v.classname)), "item_health") || (strstr(strlwr(PR_GetString(touch->v.classname)), "item_armor") != NULL))) { //Only ammo respawn
 				return;
 			}
-
+			
 			if ((int)touch->v.spawnflags & AD_ITEM_RESPAWN) { //Stradex: Arcane dimensions fix I hope.
-				Con_Printf("Avoiding to touch item that will respawn\n");
+				//Con_Printf("Avoiding to touch item that will respawn\n");
 				return;
 			}
 			if (strstr(strlwr(PR_GetString(touch->v.classname)), "item_custom") != NULL) { //Stradex: Arcane dimensions fix I hope
@@ -665,7 +665,7 @@ This version is from FTE and attempts to be more numerically stable than vanilla
 This is achieved by recursing at the actual decision points instead of vanilla's habit of vanilla's habit of using points that are outside of the child's volume.
 It also uses itself to test solidity on the other side of the node, which ensures consistent precision.
 The actual collision point is (still) biased by an epsilon, so the end point shouldn't be inside walls either way.
-FTE's version 'should' be more compatible with vanilla than DP's (which doesn't take care with allsolid).
+FTE's version 'should' be more compatible with vanilla than DP's (which doesn't take care with all solid).
 ezQuake also has a version of this logic, but I trust mine more.
 ==================
 */

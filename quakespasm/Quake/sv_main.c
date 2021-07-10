@@ -1471,6 +1471,7 @@ void SV_Init (void)
 	extern	cvar_t	sv_sound_land;			//spike - and also mutable...
 	extern	cvar_t  sv_gameplay_keepitemsrespawn; // Stradex - Allow players to keep items after they respawn
 	extern	cvar_t  sv_itemrespawn; // Stradex - The time it takes for items to respawn in COOP. 0 means no respawn.
+	extern	cvar_t  sv_ignoresomecrashes; // Stradex
 
 
 	Cvar_RegisterVariable (&sv_maxvelocity);
@@ -1496,6 +1497,7 @@ void SV_Init (void)
 	Cvar_RegisterVariable (&sv_sound_land); //spike
 	Cvar_RegisterVariable(&sv_gameplay_keepitemsrespawn); //Stradex
 	Cvar_RegisterVariable(&sv_itemrespawn); //Stradex
+	Cvar_RegisterVariable(&sv_ignoresomecrashes); // Stradex
 
 	if (isDedicated)
 		sv_public.string = "1";
